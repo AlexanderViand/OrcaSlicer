@@ -114,6 +114,7 @@ public:
     int start_send_gcode_to_sdcard(PrintParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, OnWaitFn wait_fn);
     int start_local_print(PrintParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn);
     int start_sdcard_print(PrintParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn);
+    bool retry_last_print_request(const std::string& dev_id);
     FilamentSyncMode get_filament_sync_mode() const;
     bool fetch_filament_info(std::string dev_id);
     int get_user_presets(std::map<std::string, std::map<std::string, std::string>>* user_presets);
@@ -143,6 +144,7 @@ public:
     int get_subtask(BBLModelTask* task, OnGetSubTaskFn getsub_fn);
     int get_model_mall_home_url(std::string* url);
     int get_model_mall_detail_url(std::string* url, std::string id);
+    int get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body);
     int get_my_profile(std::string token, unsigned int* http_code, std::string* http_body);
     int track_enable(bool enable);
     int track_remove_files();

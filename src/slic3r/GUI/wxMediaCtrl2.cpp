@@ -1,13 +1,14 @@
 #include "wxMediaCtrl2.h"
-#include "libslic3r/Time.hpp"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
+#include <wx/log.h>
 #include <boost/filesystem/operations.hpp>
 #ifdef __WIN32__
 #include <winuser.h>
 #include <versionhelpers.h>
 #include <wx/msw/registry.h>
 #include <shellapi.h>
+#include "slic3r/Utils/PJarczakLinuxBridge/PJarczakLinuxBridgeConfig.hpp"
 #endif
 
 #ifdef __LINUX__
@@ -91,6 +92,11 @@ void wxMediaCtrl2::Load(wxURI url)
         std::string             data_dir_str = Slic3r::data_dir();
         boost::filesystem::path data_dir_path(data_dir_str);
         auto                    dll_path = data_dir_path / "plugins" / "BambuSource.dll";
+        if (Slic3r::PJarczakLinuxBridge::enabled()) {
+            auto camera_dll_path = data_dir_path / "cameratools" / "BambuSource.dll";
+            if (boost::filesystem::exists(camera_dll_path))
+                dll_path = camera_dll_path;
+        }
         if (path.empty() || !wxFile::Exists(path) || clsid != CLSID_BAMBU_SOURCE) {
             if (boost::filesystem::exists(dll_path)) {
                 CallAfter(
@@ -216,6 +222,8 @@ void wxMediaCtrl2::Stop()
     wxMediaCtrl::Stop();
 }
 
+void wxMediaCtrl2::SetIdleImage(wxString const &image) {}
+
 #ifdef __LINUX__
 extern "C" int gst_bambu_last_error;
 #endif
@@ -247,6 +255,13 @@ wxSize wxMediaCtrl2::GetVideoSize() const
 wxSize wxMediaCtrl2::DoGetBestSize() const
 {
     return {-1, -1};
+}
+
+void wxMediaCtrl2::DoSetSize(int x, int y, int width, int height, int sizeFlags)
+{
+    wxWindow::DoSetSize(x, y, width, height, sizeFlags);
+    if (sizeFlags & wxSIZE_USE_EXISTING) return;
+    wxMediaCtrl_OnSize(this, m_video_size, width, height);
 }
 
 #ifdef __WIN32__

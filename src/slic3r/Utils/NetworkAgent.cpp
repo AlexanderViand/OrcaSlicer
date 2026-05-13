@@ -12,7 +12,7 @@
 
 namespace Slic3r {
 
-bool NetworkAgent::use_legacy_network = true;
+bool NetworkAgent::use_legacy_network = false;
 
 // ============================================================================
 // Static methods - delegate to BBLNetworkPlugin
@@ -599,6 +599,22 @@ int NetworkAgent::start_sdcard_print(PrintParams params, OnUpdateStatusFn update
     return -1;
 }
 
+bool NetworkAgent::retry_last_print_request(const std::string& dev_id)
+{
+    std::shared_ptr<IPrinterAgent> printer_agent;
+    {
+        std::lock_guard<std::mutex> lock(m_agent_mutex);
+        printer_agent = m_printer_agent;
+    }
+
+    auto bbl_printer_agent = std::dynamic_pointer_cast<BBLPrinterAgent>(printer_agent);
+    if (!bbl_printer_agent) {
+        return false;
+    }
+
+    return bbl_printer_agent->retry_last_print_request(dev_id);
+}
+
 FilamentSyncMode NetworkAgent::get_filament_sync_mode() const
 {
     if (m_printer_agent) return m_printer_agent->get_filament_sync_mode();
@@ -772,6 +788,12 @@ int NetworkAgent::get_model_mall_home_url(std::string* url)
 int NetworkAgent::get_model_mall_detail_url(std::string* url, std::string id)
 {
     if (m_cloud_agent) return m_cloud_agent->get_model_mall_detail_url(url, id);
+    return -1;
+}
+
+int NetworkAgent::get_my_token(std::string ticket, unsigned int* http_code, std::string* http_body)
+{
+    if (m_cloud_agent) return m_cloud_agent->get_my_token(ticket, http_code, http_body);
     return -1;
 }
 
