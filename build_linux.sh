@@ -143,14 +143,18 @@ function check_available_memory_and_disk() {
     MIN_DISK_KB=$((10 * 1024 * 1024))
 
     if [[ ${FREE_MEM_GB} -le ${MIN_MEM_GB} ]] ; then
-        echo -e "\nERROR: Orca Slicer Builder requires at least ${MIN_MEM_GB}G of 'available' mem (system has only ${FREE_MEM_GB}G available)"
+        echo -e "
+ERROR: Orca Slicer Builder requires at least ${MIN_MEM_GB}G of 'available' mem (system has only ${FREE_MEM_GB}G available)"
         echo && free --human && echo
         echo "Invoke with -r to skip RAM and disk checks."
         exit 2
     fi
 
     if [[ ${FREE_DISK_KB} -le ${MIN_DISK_KB} ]] ; then
-        echo -e "\nERROR: Orca Slicer Builder requires at least $(echo "${MIN_DISK_KB}" |awk '{ printf "%.1fG\n", $1/1024/1024; }') (system has only $(echo "${FREE_DISK_KB}" | awk '{ printf "%.1fG\n", $1/1024/1024; }') disk free)"
+        echo -e "
+ERROR: Orca Slicer Builder requires at least $(echo "${MIN_DISK_KB}" |awk '{ printf "%.1fG
+", $1/1024/1024; }') (system has only $(echo "${FREE_DISK_KB}" | awk '{ printf "%.1fG
+", $1/1024/1024; }') disk free)"
         echo && df --human-readable . && echo
         echo "Invoke with -r to skip ram and disk checks."
         exit 1
@@ -459,11 +463,11 @@ elif [[ "${DISTRIBUTION_LIKE}" == *"suse"* ]] ; then
 fi
 
 if [ ! -f "./scripts/linux.d/${DISTRIBUTION}" ] ; then
-    echo "Your distribution \"${DISTRIBUTION}\" is not supported by system-dependency scripts in ./scripts/linux.d/"
+    echo "Your distribution "${DISTRIBUTION}" is not supported by system-dependency scripts in ./scripts/linux.d/"
     echo "Please resolve dependencies manually and contribute a script for your distribution to upstream."
     exit 1
 else
-    echo "resolving system dependencies for distribution \"${DISTRIBUTION}\" ..."
+    echo "resolving system dependencies for distribution "${DISTRIBUTION}" ..."
     # shellcheck source=/dev/null
     source "./scripts/linux.d/${DISTRIBUTION}"
 fi
@@ -581,6 +585,8 @@ if [[ -n "${BUILD_IMAGE}" || -n "${BUILD_ORCA}" ]] ; then
 fi
 
 elapsed=$SECONDS
-printf "\nBuild completed in %dh %dm %ds\n" $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))
+printf "
+Build completed in %dh %dm %ds
+" $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))
 
 popd > /dev/null # ${SCRIPT_PATH}

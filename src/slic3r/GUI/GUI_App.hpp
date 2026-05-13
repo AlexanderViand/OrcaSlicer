@@ -746,6 +746,11 @@ public:
     // so the auth server stays on the ?access_token= redirect path.
     std::string     get_bbl_client_version();
 
+    // FULU: build/apply the X-BBL-* HTTP headers used to identify the slicer to BBL cloud.
+    std::map<std::string, std::string> get_extra_header();
+    void            init_http_extra_header();
+    void            update_http_extra_header();
+
 private:
     int             updating_bambu_networking();
     bool            on_init_inner();

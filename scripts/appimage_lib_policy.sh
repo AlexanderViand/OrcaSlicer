@@ -28,7 +28,7 @@ appimage_is_elf_file() {
 
 appimage_list_direct_dependencies() {
     local target="$1"
-    local line dep dep_name
+    local line dep dep_name target_real target_dir ldd_library_path
     declare -A needed=()
 
     # Use objdump to identify the direct DT_NEEDED entries first. ldd reports the
@@ -42,6 +42,14 @@ appimage_list_direct_dependencies() {
 
     if (( ${#needed[@]} == 0 )); then
         return 0
+    fi
+
+    # Also point ldd at the target's own directory so bundled siblings resolve.
+    target_real="$(readlink -f "$target" 2>/dev/null || printf '%s' "$target")"
+    target_dir="$(dirname "$target_real")"
+    ldd_library_path="$target_dir"
+    if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
+        ldd_library_path+="${ldd_library_path:+:}${LD_LIBRARY_PATH}"
     fi
 
     while IFS= read -r line; do
@@ -71,5 +79,5 @@ appimage_list_direct_dependencies() {
         if [[ -n "$dep" ]]; then
             echo "$dep"
         fi
-    done < <(ldd "$target" 2>/dev/null || true)
+    done < <(LD_LIBRARY_PATH="$ldd_library_path" ldd "$target" 2>/dev/null || true)
 }

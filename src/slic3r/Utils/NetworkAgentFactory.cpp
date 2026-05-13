@@ -6,6 +6,7 @@
 #include "QidiPrinterAgent.hpp"
 #include "SnapmakerPrinterAgent.hpp"
 #include "MoonrakerPrinterAgent.hpp"
+#include "PJarczakLinuxBridge/PJarczakLinuxBridgeConfig.hpp"
 #include <boost/log/trivial.hpp>
 #include <map>
 #include <mutex>
@@ -154,10 +155,20 @@ std::unique_ptr<NetworkAgent> create_agent_from_config(const std::string& log_di
     if (!app_config)
         return std::make_unique<NetworkAgent>(nullptr, nullptr);
 
-    // Always create Orca cloud agent as the primary provider
-    auto cloud_agent = NetworkAgentFactory::create_cloud_agent(ORCA_CLOUD_PROVIDER, log_dir);
+    // Pick the primary cloud provider. Default is Orca; FULU's Bambu networking
+    // integration lets the user opt into BBL via app config, and the Linux-bridge build
+    // forces BBL on Windows when the bambu networking plugin is installed.
+    std::string primary_provider = app_config->get_bool("use_orca_cloud") ? ORCA_CLOUD_PROVIDER : BBL_CLOUD_PROVIDER;
+#if defined(_MSC_VER) || defined(_WIN32)
+    if (Slic3r::PJarczakLinuxBridge::enabled() && app_config->get_bool("installed_networking")) {
+        BOOST_LOG_TRIVIAL(info) << "Linux bridge enabled on Windows - forcing BBL cloud agent";
+        primary_provider = BBL_CLOUD_PROVIDER;
+    }
+#endif
+
+    auto cloud_agent = NetworkAgentFactory::create_cloud_agent(primary_provider, log_dir);
     if (!cloud_agent) {
-        BOOST_LOG_TRIVIAL(error) << "Failed to create cloud agent";
+        BOOST_LOG_TRIVIAL(error) << "Failed to create cloud agent for provider " << primary_provider;
     }
 
     auto agent = std::make_unique<NetworkAgent>(std::move(cloud_agent), nullptr);
