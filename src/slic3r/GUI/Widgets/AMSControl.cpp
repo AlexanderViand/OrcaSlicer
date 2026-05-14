@@ -9,6 +9,7 @@
 
 #include "slic3r/GUI/DeviceCore/DevManager.h"
 #include "slic3r/GUI/DeviceCore/DevFilaSystem.h"
+#include "slic3r/GUI/DeviceCore/DevFilaSwitch.h"
 
 #include <wx/simplebook.h>
 #include <wx/dcgraph.h>
@@ -114,9 +115,19 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
 
 
     m_sizer_ams_option = new wxBoxSizer(wxHORIZONTAL);
+    // X2D / FS01: dedicated row hosting the switcher icon between the ams
+    // body and the option row. Hidden by default; UpdateAms() shows it when
+    // the device reports a filament switcher installed.
+    m_sizer_switcher_option = new wxBoxSizer(wxHORIZONTAL);
     m_sizer_option_left = new wxBoxSizer(wxHORIZONTAL);
     m_sizer_option_mid = new wxBoxSizer(wxHORIZONTAL);
     m_sizer_option_right = new wxBoxSizer(wxHORIZONTAL);
+
+    /* X2D / FS01 switcher icon — hidden by default. Placed between the
+       AMS body and the option row to mimic BambuStudio's layout. */
+    m_switcher = new SwitcherImage(m_amswin, wxID_ANY, "fila_switch", wxSize(FromDIP(29), FromDIP(16)), wxDefaultPosition);
+    m_switcher->Hide();
+    m_sizer_switcher_option->Add(m_switcher, 0, wxALIGN_CENTER, 0);
 
     auto m_panel_option_left    = new wxPanel(m_amswin);
     auto m_panel_option_right   = new wxPanel(m_amswin);
@@ -207,6 +218,8 @@ AMSControl::AMSControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, cons
     m_sizer_body->Add(0, 0, 1, wxEXPAND | wxTOP, FromDIP(10));
     m_sizer_body->Add(m_sizer_ams_body, 0, wxALIGN_CENTER, 0);
     m_sizer_body->Add(m_sizer_down_road, 0, wxALIGN_CENTER, 0);
+    // X2D / FS01: switcher row (hidden unless FS01 reported by device).
+    m_sizer_body->Add(m_sizer_switcher_option, 0, wxALIGN_CENTER, 0);
     m_sizer_body->Add(m_sizer_ams_option, 0, wxEXPAND, 0);
 
     m_amswin->SetSizer(m_sizer_body);
@@ -975,6 +988,37 @@ void AMSControl::UpdateAms(const std::string   &series_name,
     {
         m_amswin->Layout();
     }
+
+    /* X2D / FS01: show the switcher icon between the extruder columns
+       when (a) the device reports a filament switcher installed and
+       (b) the printer has 2+ extruders. Ported from BambuStudio
+       53d05cdfb8. */
+    if (m_switcher) {
+        const auto [install, ready] = isFilaSwitchReady();
+        (void)ready; // reserved for future "show error icon when installed-but-not-ready"
+        const bool isShow = install && m_total_ext_count >= 2;
+        if (m_switcher->IsShown() != isShow) {
+            m_switcher->Show(isShow);
+            m_sizer_body->Layout();
+            m_sizer_body->Fit(this);
+            this->Layout();
+            this->Refresh(true);
+            this->Update();
+        }
+    }
+}
+
+std::tuple<bool, bool> AMSControl::isFilaSwitchReady()
+{
+    Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
+    if (!dev) return {false, false};
+    MachineObject* obj = dev->get_selected_machine();
+    if (!obj) return {false, false};
+    DevFilaSwitch* fs = obj->GetFilaSwitch();
+    if (fs) {
+        return {fs->IsInstalled(), fs->IsReady()};
+    }
+    return {false, false};
 }
 
 void AMSControl::AddAmsPreview(AMSinfo info, AMSModel type)

@@ -368,6 +368,34 @@ public:
     ~AMSextruderImage();
 };
 
+/*************************************************
+Description: SwitcherImage — renders the FS01 filament-switcher icon
+between the two extruder columns on the AMS panel. Visibility is driven
+by AMSControl in response to DevFilaSwitch state; the widget itself is
+a thin wxWindow that just paints the static bitmap (or an error variant)
+when m_show_state is true.
+
+Ported from BambuStudio (commit 53d05cdfb8 "NEW: Add switcher icon to
+ams page"). The fila_switch.svg and fila_switch_error.svg resources are
+also copied from bambu/master.
+**************************************************/
+class SwitcherImage : public wxWindow
+{
+public:
+    void setShowState(bool show_state) { m_show_state = show_state; }
+    void paintEvent(wxPaintEvent &evt);
+
+    void            render(wxDC &dc);
+    bool            m_show_state{false};
+    wxColour        m_colour;
+    ScalableBitmap  m_switcher;
+    string          m_file_name;
+    void            doRender(wxDC &dc);
+
+    SwitcherImage(wxWindow *parent, wxWindowID id, string file_name, const wxSize& size, const wxPoint &pos = wxDefaultPosition);
+    ~SwitcherImage();
+};
+
 //AMSExtImage upon ext lib
 class AMSExtImage : public wxWindow
 {

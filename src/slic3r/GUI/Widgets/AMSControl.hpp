@@ -51,6 +51,10 @@ protected:
 
     int         m_total_ext_count = 1;
     AMSextruder *m_extruder{nullptr};
+    // X2D / FS01: when the device reports a filament switcher is installed
+    // and the printer has 2 extruders, this icon is shown between the two
+    // extruder columns. Ported from BambuStudio 53d05cdfb8.
+    SwitcherImage *m_switcher{nullptr};
     AMSRoadDownPart* m_down_road{ nullptr };
 
     /*items*/
@@ -68,6 +72,9 @@ protected:
 
     /*option*/
     wxBoxSizer *m_sizer_ams_option{nullptr};
+    // X2D / FS01: dedicated sizer that hosts m_switcher between the
+    // ams body and the bottom option row. Empty/hidden on non-FS01 devices.
+    wxBoxSizer *m_sizer_switcher_option{nullptr};
     wxBoxSizer* m_sizer_option_left{nullptr};
     wxBoxSizer* m_sizer_option_mid{nullptr};
     wxBoxSizer* m_sizer_option_right{nullptr};
@@ -146,6 +153,12 @@ public:
     void EnterNoneAMSMode();
     void EnterGenericAMSMode();
     void EnterExtraAMSMode();
+
+    /* X2D / FS01: query the currently-selected machine for filament-switcher
+       state. Returns {installed, ready}. {false,false} when there is no
+       selected machine or it doesn't have a DevFilaSwitch.
+       Ported from BambuStudio 7eee786524. */
+    std::tuple<bool, bool> isFilaSwitchReady();
 
     void PlayRridLoading(wxString amsid, wxString canid);
     void StopRridLoading(wxString amsid, wxString canid);
