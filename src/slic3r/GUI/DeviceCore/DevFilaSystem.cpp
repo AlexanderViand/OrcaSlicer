@@ -389,9 +389,27 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                             } else if (bind_switch_in == 1) {
                                 binded_switcher_pos = DevFilaSwitch::SwitchPos::POS_IN_A;
                             }
-                            // Keep the legacy single-id field pointing at MAIN as a fallback for
-                            // existing OrcaSlicer code paths that read it.
-                            extuder_id = MAIN_EXTRUDER_ID;
+                            // X2D / FS01 L/R split: OrcaSlicer's existing AMS UI routes each
+                            // AMS to either MAIN_EXTRUDER_ID's panel or DEPUTY_EXTRUDER_ID's
+                            // panel based on this single-id field. With FS01 all AMS are
+                            // physically routable to both extruders, but for a deterministic
+                            // visual split we use the FS01 input port the AMS is plugged into.
+                            //
+                            // OrcaSlicer's convention (see AMSControl::AddAmsPreview) is
+                            // MAIN_EXTRUDER_ID -> right panel, DEPUTY_EXTRUDER_ID -> left,
+                            // which is inverted from BambuStudio's Main/Auxiliary orientation
+                            // but consistent across all OrcaSlicer printers including H2D.
+                            // We follow the OrcaSlicer convention here so FS01 setups don't
+                            // visually disagree with non-FS01 dual-extruder printers in the
+                            // same UI. Concretely:
+                            //   * POS_IN_A  -> MAIN_EXTRUDER_ID   (right panel)
+                            //   * POS_IN_B  -> DEPUTY_EXTRUDER_ID (left panel)
+                            if (binded_switcher_pos.has_value()
+                                && *binded_switcher_pos == DevFilaSwitch::SwitchPos::POS_IN_B) {
+                                extuder_id = DEPUTY_EXTRUDER_ID;
+                            } else {
+                                extuder_id = MAIN_EXTRUDER_ID;
+                            }
                         } else if (extuder_id == 0xE) {
                             // FilaSwitch not installed but AMS still reports as switch-bound;
                             // keep the AMS visible with an empty bind set (BambuStudio behaviour).
