@@ -999,8 +999,12 @@ void AMSControl::UpdateAms(const std::string   &series_name,
         const bool isShow = install && m_total_ext_count >= 2;
         if (m_switcher->IsShown() != isShow) {
             m_switcher->Show(isShow);
-            m_sizer_body->Layout();
-            m_sizer_body->Fit(this);
+            // m_sizer_body is a local in the ctor — relayout via the
+            // owning panel (m_amswin) and the control itself.
+            if (m_amswin) {
+                m_amswin->Layout();
+                m_amswin->Fit();
+            }
             this->Layout();
             this->Refresh(true);
             this->Update();

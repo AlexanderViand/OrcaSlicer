@@ -5046,6 +5046,14 @@ void MachineObject::parse_new_info(json print)
         m_storage->set_sdcard_state(get_flag_bits(aux, 12, 2));
     }
 
+    // X2D-class FilaSwitch state — also parse here on delta updates. The
+    // msg==0 (push_all) branch in parse_json() above is rarely hit after
+    // the first connect; for ongoing FS01 install/ready state we rely on
+    // delta pushes flowing through parse_new_info().
+    if (m_fila_switch) {
+        m_fila_switch->ParseFilaSwitchInfo(print);
+    }
+
     /*stat*/
     std::string stat = print["stat"].get<std::string>();
 
