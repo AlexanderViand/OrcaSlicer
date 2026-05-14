@@ -360,7 +360,6 @@ public:
     func_get_model_mall_detail_url get_get_model_mall_detail_url() const { return m_get_model_mall_detail_url; }
     func_get_my_token get_get_my_token() const { return m_get_my_token; }
     func_get_my_profile get_get_my_profile() const { return m_get_my_profile; }
-    func_get_my_token get_get_my_token() const { return m_get_my_token; }
     func_track_enable get_track_enable() const { return m_track_enable; }
     func_track_remove_files get_track_remove_files() const { return m_track_remove_files; }
     func_track_event get_track_event() const { return m_track_event; }
@@ -495,7 +494,6 @@ private:
     func_get_model_mall_detail_url m_get_model_mall_detail_url{nullptr};
     func_get_my_token m_get_my_token{nullptr};
     func_get_my_profile m_get_my_profile{nullptr};
-    func_get_my_token m_get_my_token{nullptr};
     func_track_enable m_track_enable{nullptr};
     func_track_remove_files m_track_remove_files{nullptr};
     func_track_event m_track_event{nullptr};

@@ -2374,18 +2374,14 @@ std::map<std::string, std::string> GUI_App::get_extra_header()
 //BBS
 void GUI_App::init_http_extra_header()
 {
-    std::map<std::string, std::string> extra_headers = get_extra_header();
-
-    if (m_agent)
-        m_agent->set_extra_http_header(extra_headers);
+    // Upstream lifted the extra-headers handling into the static Slic3r::Http API; the
+    // per-agent setter FULU used (m_agent->set_extra_http_header) no longer exists.
+    Slic3r::Http::set_extra_headers(get_extra_header());
 }
 
 void GUI_App::update_http_extra_header()
 {
-    std::map<std::string, std::string> extra_headers = get_extra_header();
-    Slic3r::Http::set_extra_headers(extra_headers);
-    if (m_agent)
-        m_agent->set_extra_http_header(extra_headers);
+    Slic3r::Http::set_extra_headers(get_extra_header());
 }
 
 void GUI_App::on_start_subscribe_again(std::string dev_id)
@@ -3761,9 +3757,9 @@ bool GUI_App::on_init_network(bool try_backup)
         }
     }
 
+    std::string data_directory = data_dir();
     if (create_network_agent) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", create network agent...");
-        std::string data_directory = data_dir();
 
         Slic3r::NetworkAgentFactory::register_all_agents();
 

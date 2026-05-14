@@ -7,6 +7,9 @@
 #include "libslic3r/Utils.hpp"
 #include "NetworkAgent.hpp"
 #include "BBLNetworkPlugin.hpp"
+#include "BBLPrinterAgent.hpp"
+
+#include <mutex>
 
 namespace Slic3r {
 

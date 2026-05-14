@@ -7,6 +7,7 @@
 #include "IPrinterAgent.hpp"
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -193,6 +194,7 @@ private:
     std::map<std::string, std::shared_ptr<ICloudServiceAgent>> m_cloud_agents;
     std::shared_ptr<IPrinterAgent> m_printer_agent;
     std::string m_printer_agent_id;
+    mutable std::mutex m_agent_mutex; // FULU: guards m_printer_agent during retry_last_print_request
 };
 
 }
