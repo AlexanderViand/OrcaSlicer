@@ -23,6 +23,7 @@
 #include "fast_float/fast_float.h"
 
 #include "DeviceCore/DevFilaSystem.h"
+#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevExtensionTool.h"
 #include "DeviceCore/DevExtruderSystem.h"
 #include "DeviceCore/DevNozzleSystem.h"
@@ -560,6 +561,7 @@ MachineObject::MachineObject(DeviceManager* manager, NetworkAgent* agent, std::s
         m_extension_tool = DevExtensionTool::Create(this);
         m_nozzle_system = new DevNozzleSystem(this);
         m_fila_system   = new DevFilaSystem(this);
+        m_fila_switch   = new DevFilaSwitch(this); // X2D FilaSwitch (FS01); idle for non-X2D printers
         m_hms_system    = new DevHMS(this);
         m_config = new DevConfig(this);
 
@@ -607,6 +609,9 @@ MachineObject::~MachineObject()
 
         delete m_fila_system;
         m_fila_system = nullptr;
+
+        delete m_fila_switch;
+        m_fila_switch = nullptr;
 
         delete m_hms_system;
         m_hms_system = nullptr;
@@ -3717,6 +3722,12 @@ int MachineObject::parse_json(std::string tunnel, std::string payload, bool key_
                     update_filament_list();
                     if (jj.contains("ams")) {
                         DevFilaSystemParser::ParseV1_0(jj, this, m_fila_system, key_field_only);
+                    }
+                    // X2D-class FilaSwitch state — parse alongside the AMS payload. The parser
+                    // looks for `aux` (installed flag) and `device.fila_switch.*`; missing keys
+                    // are no-ops so legacy printers are unaffected.
+                    if (m_fila_switch) {
+                        m_fila_switch->ParseFilaSwitchInfo(jj);
                     }
 
                     /* vitrual tray*/

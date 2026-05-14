@@ -360,23 +360,51 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                     int extuder_id = MAIN_EXTRUDER_ID; // Default nozzle id
                     int type_id = 1;   // 0:dummy 1:ams 2:ams-lite 3:n3f 4:n3s
 
+                    // X2D-family: AMS may be bound via the FilaSwitch hardware (FS01); the parser
+                    // tracks both the legacy single-extruder id and the new bind set + switcher pos
+                    // so downstream code that hasn't been ported yet keeps working. Ported from
+                    // bambu/master DevFilaSystem.cpp ParseV1_0().
+                    std::set<int> binded_extruder_set;
+                    std::optional<DevFilaSwitch::SwitchPos> binded_switcher_pos;
+
                     /*ams info*/
                     if (it->contains("info")) {
                         const std::string& info = (*it)["info"].get<std::string>();
                         type_id = DevUtil::get_flag_bits(info, 0, 4);
                         extuder_id = DevUtil::get_flag_bits(info, 8, 4);
+
+                        // 0xE = "bound via FilaSwitch". With a switch installed we bind to both
+                        // extruders and record the switch position from bits 24..27; without the
+                        // switch installed we still keep the AMS in the list (legacy printers
+                        // simply never report 0xE).
+                        const bool switch_installed =
+                            obj->GetFilaSwitch() != nullptr && obj->GetFilaSwitch()->IsInstalled();
+                        if (extuder_id == 0xE && switch_installed) {
+                            const int bind_switch_in = DevUtil::get_flag_bits(info, 24, 4);
+                            if (bind_switch_in == 0 || bind_switch_in == 1) {
+                                binded_extruder_set = { MAIN_EXTRUDER_ID, DEPUTY_EXTRUDER_ID };
+                            }
+                            if (bind_switch_in == 0) {
+                                binded_switcher_pos = DevFilaSwitch::SwitchPos::POS_IN_B;
+                            } else if (bind_switch_in == 1) {
+                                binded_switcher_pos = DevFilaSwitch::SwitchPos::POS_IN_A;
+                            }
+                            // Keep the legacy single-id field pointing at MAIN as a fallback for
+                            // existing OrcaSlicer code paths that read it.
+                            extuder_id = MAIN_EXTRUDER_ID;
+                        } else if (extuder_id == 0xE) {
+                            // FilaSwitch not installed but AMS still reports as switch-bound;
+                            // keep the AMS visible with an empty bind set (BambuStudio behaviour).
+                            binded_extruder_set.clear();
+                            extuder_id = MAIN_EXTRUDER_ID;
+                        } else {
+                            binded_extruder_set = { extuder_id };
+                        }
                     } else {
                         if (!obj->is_enable_ams_np && obj->get_printer_ams_type() == "f1") {
                             type_id = DevAms::AMS_LITE;
                         }
-                    }
-
-                    /*AMS without initialization*/
-                    if (extuder_id == 0xE)
-                    {
-                        ams_id_set.erase(ams_id);
-                        system->amsList.erase(ams_id);
-                        continue;
+                        binded_extruder_set = { extuder_id };
                     }
 
                     ams_id_set.erase(ams_id);
@@ -399,6 +427,11 @@ void DevFilaSystemParser::ParseV1_0(const json& jj, MachineObject* obj, DevFilaS
                         curr_ams = ams_it->second;
                     }
                     if (!curr_ams) continue;
+
+                    // Propagate the new-format binding state onto the AMS object (no-op for
+                    // legacy printers where binded_extruder_set == { extuder_id }).
+                    curr_ams->SetBindedExtruderSet(binded_extruder_set);
+                    curr_ams->SetSwitcherPos(binded_switcher_pos);
 
                     /*set ams type flag*/
                     curr_ams->SetAmsType(type_id);

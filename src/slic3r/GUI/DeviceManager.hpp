@@ -83,6 +83,7 @@ class DevExtensionTool;
 class DevExtderSystem;
 class DevFan;
 class DevFilaSystem;
+class DevFilaSwitch;
 class DevPrintOptions;
 class DevHMS;
 class DevLamp;
@@ -115,6 +116,7 @@ private:
     DevExtderSystem*  m_extder_system;
     DevNozzleSystem*  m_nozzle_system;
     DevFilaSystem*    m_fila_system;
+    DevFilaSwitch*    m_fila_switch{ nullptr }; // X2D-class FilaSwitch (FS01) state, may be unused on older printers
     DevFan*           m_fan;
     DevBed *          m_bed;
     DevStorage*       m_storage;
@@ -329,6 +331,7 @@ public:
     DevNozzleSystem* GetNozzleSystem() const { return m_nozzle_system;}
 
     DevFilaSystem*   GetFilaSystem() const { return m_fila_system;}
+    DevFilaSwitch*   GetFilaSwitch() const { return m_fila_switch;}
     bool             HasAms() const;
 
     DevLamp*         GetLamp() const { return m_lamp; }

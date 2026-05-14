@@ -10,6 +10,7 @@
 
 #pragma once
 #include <string>
+#include <utility>
 
 enum PrinterArch
 {
@@ -54,6 +55,11 @@ enum AmsStatusMain
 #define DEPUTY_EXTRUDER_ID        1
 #define UNIQUE_EXTRUDER_ID        MAIN_EXTRUDER_ID
 #define INVALID_EXTRUDER_ID       -1
+
+// pair<ams_id, slot_id> used by DevFilaSwitch and AMS mapping. Ported from BambuStudio
+// (bambu/master src/slic3r/GUI/DeviceCore/DevDefs.h) so the FilaSwitch parser can return
+// a coherent slot reference even though OrcaSlicer's older AMS code only tracked single ids.
+using DevAmsSlotId = std::pair<int, int>;
 
 
 /* Nozzle*/

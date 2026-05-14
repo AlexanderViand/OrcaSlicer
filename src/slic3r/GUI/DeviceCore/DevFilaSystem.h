@@ -4,11 +4,13 @@
 
 #include "DevDefs.h"
 #include "DevFilaAmsSetting.h"
+#include "DevFilaSwitch.h"
 #include "DevUtil.h"
 
 #include <map>
 #include <optional>
 #include <memory>
+#include <set>
 #include <wx/string.h>
 #include <wx/colour.h>
 
@@ -163,6 +165,16 @@ public:
     // installed on the extruder
     int   GetExtruderId() const { return m_ext_id; }
 
+    // X2D/H2D: an AMS may be physically bound via the FilaSwitch (FS01) hardware which can
+    // route it to either or both extruders. BambuStudio expresses this as a set of extruder
+    // ids plus an optional switch position. Ported from bambu/master DevFilaSystem.h.
+    const std::set<int>& GetBindedExtruderSet() const { return m_binded_extruder_set; }
+    int   GetBindedExtruderCount() const { return (int)m_binded_extruder_set.size(); }
+    void  SetBindedExtruderSet(const std::set<int>& s) { m_binded_extruder_set = s; }
+
+    std::optional<DevFilaSwitch::SwitchPos> GetSwitcherPos() const { return m_binded_switcher_pos; }
+    void  SetSwitcherPos(std::optional<DevFilaSwitch::SwitchPos> p) { m_binded_switcher_pos = p; }
+
     // temperature and humidity
     float GetCurrentTemperature() const { return m_current_temperature; }
 
@@ -178,6 +190,11 @@ private:
     std::string   m_ams_id;
     int           m_ext_id;//extruder id
     bool          m_exist = false;
+
+    // X2D/H2D FilaSwitch binding state (see DevFilaSwitch). Empty set + nullopt switcher is
+    // the legacy state used by older printers / single-extruder AMS bindings.
+    std::set<int>                            m_binded_extruder_set;
+    std::optional<DevFilaSwitch::SwitchPos>  m_binded_switcher_pos;
 
     // slots and trays
     std::map<std::string, DevAmsTray*> m_trays;//id -> DevAmsTray*
