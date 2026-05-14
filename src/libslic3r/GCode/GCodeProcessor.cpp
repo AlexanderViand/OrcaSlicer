@@ -1955,6 +1955,10 @@ void GCodeProcessor::apply_config(const PrintConfig& config)
 
     m_physical_extruder_map = config.physical_extruder_map.values;
 
+    // X2D / FS01 filament switcher: mirror the print config flag so consumers
+    // can query whether the upcoming slice will be routed through the FS01.
+    m_has_filament_switcher = config.has_filament_switcher.value;
+
     m_extruder_offsets.resize(filament_count);
     m_extruder_colors.resize(filament_count);
     m_result.filament_diameters.resize(filament_count);
@@ -2080,6 +2084,12 @@ void GCodeProcessor::apply_config(const DynamicPrintConfig& config)
     const ConfigOptionInts* physical_extruder_map = config.option<ConfigOptionInts>("physical_extruder_map");
     if (physical_extruder_map != nullptr) {
         m_physical_extruder_map = physical_extruder_map->values;
+    }
+
+    // X2D / FS01: keep the dynamic-config path in sync with the static one.
+    const ConfigOptionBool* has_filament_switcher = config.option<ConfigOptionBool>("has_filament_switcher");
+    if (has_filament_switcher != nullptr) {
+        m_has_filament_switcher = has_filament_switcher->value;
     }
 
     const ConfigOptionEnumsGenericNullable* nozzle_type = config.option<ConfigOptionEnumsGenericNullable>("nozzle_type");
@@ -2403,6 +2413,7 @@ void GCodeProcessor::reset()
     m_global_positioning_type = EPositioningType::Absolute;
     m_e_local_positioning_type = EPositioningType::Absolute;
     m_extruder_offsets = std::vector<Vec3f>(MIN_EXTRUDERS_COUNT, Vec3f::Zero());
+    m_has_filament_switcher = false;
     m_flavor = gcfRepRapSprinter;
     m_nozzle_volume = std::vector<float>(MAXIMUM_EXTRUDER_NUMBER, 0.f);
 

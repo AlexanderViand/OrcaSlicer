@@ -83,6 +83,10 @@ namespace Slic3r
             FGMode mode;
             FGStrategy strategy;
             bool ignore_ext_filament;  //wai gua filament
+            // X2D / FS01: when true, ToolOrdering should treat AMS slot capacity
+            // as effectively unbounded for this slice (FS01 dynamically reroutes
+            // filaments so the filament-count-per-extruder limit doesn't apply).
+            bool has_filament_switcher{false};
         } group_info;
 
         struct MachineInfo {

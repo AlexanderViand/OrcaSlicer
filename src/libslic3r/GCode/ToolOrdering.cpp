@@ -1130,6 +1130,17 @@ std::vector<int> ToolOrdering::get_recommended_filament_maps(const std::vector<s
         auto extruder_ams_counts = get_extruder_ams_count(extruder_ams_count_str);
         std::vector<int> group_size = calc_max_group_size(extruder_ams_counts, ignore_ext_filament);
 
+        // X2D / FS01: when a filament switcher is physically present, the AMS
+        // slot count per extruder isn't a hard cap on filament count for this
+        // slice (FS01 reroutes filaments between extruders at print time), so
+        // lift the group-size limit to at least the total filament count.
+        // Ported from BambuStudio's ToolOrdering equivalent.
+        if (print_config.has_filament_switcher.value) {
+            int total_filaments = (int)filament_nums;
+            for (auto& s : group_size)
+                s = std::max(s, total_filaments);
+        }
+
         auto machine_filament_info = build_machine_filaments(print->get_extruder_filament_info(), extruder_ams_counts, ignore_ext_filament);
 
         std::vector<std::string> filament_types = print_config.filament_type.values;
@@ -1168,6 +1179,13 @@ std::vector<int> ToolOrdering::get_recommended_filament_maps(const std::vector<s
             context.group_info.strategy = FGStrategy::BestCost;
             context.group_info.mode = fg_mode;
             context.group_info.ignore_ext_filament = ignore_ext_filament;
+            // X2D / FS01: forward the print-config flag into the grouping
+            // context. Note OrcaSlicer's FilamentGroup machinery does not yet
+            // consume this flag for the deeper select_best_group_for_ams
+            // reroute logic (that requires the larger FilamentGroup refactor
+            // from bambu/master); for now the flag's effect is the
+            // calc_max_group_size override above and any future consumers.
+            context.group_info.has_filament_switcher = print_config.has_filament_switcher.value;
         }
 
 

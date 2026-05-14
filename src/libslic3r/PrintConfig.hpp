@@ -1329,6 +1329,13 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInts,                required_nozzle_HRC))
     ((ConfigOptionEnum<FilamentMapMode>, filament_map_mode))
     ((ConfigOptionInts,                filament_map))
+    // X2D / Bambu FS01 filament switcher: when true, slicer treats the
+    // printer as having dynamic AMS-slot capacity (FS01 reroutes filaments
+    // between extruders, so AMS slot count isn't a hard cap on filament
+    // count). Registered as a config option by PR #13623; this declaration
+    // makes it accessible as a typed PrintConfig member.
+    ((ConfigOptionBool,                has_filament_switcher))
+    ((ConfigOptionBool,                enable_filament_dynamic_map))
     //((ConfigOptionInts,                filament_extruder_id))
     ((ConfigOptionStrings,             filament_extruder_variant))
     ((ConfigOptionBool,                support_object_skip_flush))

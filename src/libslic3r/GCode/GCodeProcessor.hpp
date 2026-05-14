@@ -772,6 +772,12 @@ class Print;
         ExtruderTemps m_filament_nozzle_temp;
         ExtruderTemps m_filament_nozzle_temp_first_layer;
         std::vector<int> m_physical_extruder_map;
+        // X2D / FS01: mirrors PrintConfig.has_filament_switcher. Currently parsed and
+        // available for query, but the actual FS-aware reroute behavior in
+        // TimeProcessor::post_process requires upstream's pre-heating infrastructure
+        // which OrcaSlicer doesn't yet have, so this flag is informational at the
+        // GCodeProcessor level for now (consumed in ToolOrdering for group-size override).
+        bool m_has_filament_switcher{false};
         bool m_manual_filament_change;
 
         //BBS: x, y offset for gcode generated
