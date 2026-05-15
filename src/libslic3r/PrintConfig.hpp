@@ -425,6 +425,14 @@ enum FilamentMapMode {
     fmmAutoForFlush,
     fmmAutoForMatch,
     fmmManual,
+    // X2D / FS01: nozzle-side-only manual assignment (user picks per nozzle
+    // but lets the slicer pick the AMS slot within that side). Ported from
+    // bambu/master.
+    fmmNozzleManual,
+    // X2D / FS01: optimize the filament-to-extruder grouping for print
+    // quality rather than for flush minimization. Most useful when FS01
+    // makes both extruders equally available. Ported from bambu/master.
+    fmmAutoForQuality,
     fmmDefault
 };
 

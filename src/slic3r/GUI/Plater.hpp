@@ -195,6 +195,15 @@ public:
     void sync_ams_list(bool is_from_big_sync_btn = false);
     bool sync_extruder_list();
     bool need_auto_sync_extruder_list_after_connect_priner(const MachineObject* obj);
+
+    // X2D / FS01: returns true when the currently-selected device has a
+    // filament switcher installed AND it's reporting as ready. Mirrors
+    // bambu/master Sidebar::is_fila_switch_ready(). Used by:
+    //   * the sync_extruder_list hook that sets project_config's
+    //     has_filament_switcher flag
+    //   * the FilamentGroupPopup mode-list filter that hides Convenience
+    //     and exposes Quality mode when FS01 is active
+    bool is_fila_switch_ready();
     void update_sync_status(const MachineObject* obj);
     int get_sidebar_pos_right_x();
     void on_size(SimpleEvent &e);

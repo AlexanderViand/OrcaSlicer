@@ -168,6 +168,7 @@
 #include "CloneDialog.hpp"
 
 #include "DeviceCore/DevFilaSystem.h"
+#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevDefs.h"
@@ -568,6 +569,9 @@ struct Sidebar::priv
     void can_search();
 
     bool sync_extruder_list(bool &only_external_material);
+    // X2D / FS01: device-state FilaSwitch readiness probe. See public
+    // wrapper Sidebar::is_fila_switch_ready() for callers.
+    bool is_fila_switch_ready();
     bool switch_diameter(bool single);
     void update_sync_status(const MachineObject* obj);
 
@@ -1330,6 +1334,17 @@ bool Sidebar::priv::switch_diameter(bool single)
     return wxGetApp().get_tab(Preset::TYPE_PRINTER)->select_preset(preset->name);
 }
 
+bool Sidebar::priv::is_fila_switch_ready()
+{
+    auto* dev = wxGetApp().getDeviceManager();
+    if (!dev) return false;
+    auto* obj = dev->get_selected_machine();
+    if (!obj) return false;
+    auto* fs = obj->GetFilaSwitch();
+    if (!fs) return false;
+    return fs->IsInstalled() && fs->IsReady();
+}
+
 bool Sidebar::priv::sync_extruder_list(bool &only_external_material)
 {
     MachineObject *obj = wxGetApp().getDeviceManager()->get_selected_machine();
@@ -1444,6 +1459,20 @@ bool Sidebar::priv::sync_extruder_list(bool &only_external_material)
         is_switching_diameter = true;
         switch_diameter(true);
         is_switching_diameter = false;
+    }
+
+    // X2D / FS01: bridge the device-state FilaSwitch into the project's
+    // print config. Without this, ToolOrdering's filament-grouping path
+    // never sees has_filament_switcher = true even when the connected X2D
+    // has FS01 installed. Mirrors bambu/master Plater.cpp sync_extruder_list.
+    {
+        const bool fila_switch_ready = is_fila_switch_ready();
+        auto& project_config = wxGetApp().preset_bundle->project_config;
+        if (auto* has_switcher = project_config.option<ConfigOptionBool>("has_filament_switcher"))
+            has_switcher->value = fila_switch_ready;
+        if (auto* dynamic_filament = project_config.option<ConfigOptionBool>("enable_filament_dynamic_map"))
+            dynamic_filament->value = fila_switch_ready;
+        BOOST_LOG_TRIVIAL(info) << "sync_extruder_list: has_filament_switcher = " << fila_switch_ready;
     }
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " finish sync_extruder_list";
@@ -3397,6 +3426,14 @@ bool Sidebar::sync_extruder_list()
 {
     bool only_external_material;
     return p->sync_extruder_list(only_external_material);
+}
+
+// X2D / FS01: public accessor used by FilamentGroupPopup to filter out
+// Convenience mode (irrelevant with a switcher) and conditionally enable
+// Quality mode entries. Mirrors bambu/master Sidebar::is_fila_switch_ready.
+bool Sidebar::is_fila_switch_ready()
+{
+    return p->is_fila_switch_ready();
 }
 
 bool Sidebar::need_auto_sync_extruder_list_after_connect_priner(const MachineObject *obj)

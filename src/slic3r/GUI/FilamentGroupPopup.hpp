@@ -47,9 +47,14 @@ private:
     void SetFilamentMapMode(const FilamentMapMode mode);
 
 private:
-    enum ButtonType { btForFlush, btForMatch, btManual, btCount };
+    // X2D / FS01: btForQuality is the X2D-specific Quality Mode that
+    // prioritizes print quality over flush minimization. Visible when
+    // FilaSwitch is ready (X2D etc.); otherwise hidden. btForMatch
+    // (Convenience) is hidden when FS01 is ready since the switcher
+    // makes every assignment "convenient" by construction.
+    enum ButtonType { btForFlush, btForMatch, btForQuality, btManual, btCount };
 
-    const std::vector<FilamentMapMode> mode_list = {fmmAutoForFlush, fmmAutoForMatch, fmmManual};
+    const std::vector<FilamentMapMode> mode_list = {fmmAutoForFlush, fmmAutoForMatch, fmmAutoForQuality, fmmManual};
 
     bool m_connected{ false };
     bool m_active{ false };

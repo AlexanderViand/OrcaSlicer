@@ -577,7 +577,11 @@ CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(NozzleVolumeType)
 static const t_config_enum_values s_keys_map_FilamentMapMode = {
     { "Auto For Flush", fmmAutoForFlush },
     { "Auto For Match", fmmAutoForMatch },
-    { "Manual", fmmManual }
+    { "Manual", fmmManual },
+    // X2D / FS01 additions, ported from bambu/master. Order intentionally
+    // matches bambu/master so .3mf metadata round-trips.
+    { "Nozzle Manual", fmmNozzleManual },
+    { "Auto For Quality", fmmAutoForQuality }
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(FilamentMapMode)
 

@@ -88,17 +88,20 @@ void FilamentGroupPopup::CreateBmps()
 
 FilamentGroupPopup::FilamentGroupPopup(wxWindow *parent) : PopupWindow(parent, wxBORDER_NONE | wxPU_CONTAINS_CONTROLS)
 {
-    const wxString AutoForFlushLabel = _L("Filament-Saving Mode");
-    const wxString AutoForMatchLabel = _L("Convenience Mode");
-    const wxString ManualLabel       = _L("Custom Mode");
+    const wxString AutoForFlushLabel   = _L("Filament-Saving Mode");
+    const wxString AutoForMatchLabel   = _L("Convenience Mode");
+    const wxString AutoForQualityLabel = _L("Quality Mode");
+    const wxString ManualLabel         = _L("Custom Mode");
 
-    const wxString AutoForFlushDetail = _L("Generates filament grouping for the left and right nozzles based on the most filament-saving principles to minimize waste.");
-    const wxString AutoForMatchDetail = _L("Generates filament grouping for the left and right nozzles based on the printer's actual filament status, reducing the need for manual filament adjustment.");
-    const wxString ManualDetail       = _L("Manually assign filament to the left or right nozzle");
+    const wxString AutoForFlushDetail   = _L("Generates filament grouping for the left and right nozzles based on the most filament-saving principles to minimize waste.");
+    const wxString AutoForMatchDetail   = _L("Generates filament grouping for the left and right nozzles based on the printer's actual filament status, reducing the need for manual filament adjustment.");
+    const wxString AutoForQualityDetail = _L("Generates filament grouping for the left and right nozzles based on the quality of prints, prioritizing print quality over filament saving.");
+    const wxString ManualDetail         = _L("Manually assign filament to the left or right nozzle");
 
-    const wxString AutoForFlushDesp = ""; //_L("(Post-slicing arrangement)");
-    const wxString ManualDesp       = "";
-    const wxString AutoForMatchDesp = "";// _L("(Pre-slicing arrangement)");
+    const wxString AutoForFlushDesp   = "";
+    const wxString ManualDesp         = "";
+    const wxString AutoForMatchDesp   = "";
+    const wxString AutoForQualityDesp = "";
 
 
     wxBoxSizer *top_sizer         = new wxBoxSizer(wxVERTICAL);
@@ -115,9 +118,11 @@ FilamentGroupPopup::FilamentGroupPopup(wxWindow *parent) : PopupWindow(parent, w
     detail_infos.resize(ButtonType::btCount);
     //global_mode_tags.resize(ButtonType::btCount);
 
-    std::vector<wxString> btn_texts    = {AutoForFlushLabel, AutoForMatchLabel, ManualLabel};
-    std::vector<wxString> btn_desps    = {AutoForFlushDesp, AutoForMatchDesp, ManualDesp};
-    std::vector<wxString> mode_details = {AutoForFlushDetail, AutoForMatchDetail, ManualDetail};
+    // X2D / FS01: indexes must align with ButtonType enum
+    // {btForFlush, btForMatch, btForQuality, btManual}.
+    std::vector<wxString> btn_texts    = {AutoForFlushLabel, AutoForMatchLabel, AutoForQualityLabel, ManualLabel};
+    std::vector<wxString> btn_desps    = {AutoForFlushDesp, AutoForMatchDesp, AutoForQualityDesp, ManualDesp};
+    std::vector<wxString> mode_details = {AutoForFlushDetail, AutoForMatchDetail, AutoForQualityDetail, ManualDetail};
 
     top_sizer->AddSpacer(vertical_margin);
     CreateBmps();
@@ -256,6 +261,38 @@ void FilamentGroupPopup::Init()
         // reset the filament map mode in slice all mode
         SetFilamentMapMode(m_mode);
     }
+
+    // X2D / FS01 visibility filter — match bambu/master's
+    // resolve_available_auto_modes() semantics:
+    //   * Hide Convenience (btForMatch) when the FilaSwitch is ready,
+    //     because the switcher makes every assignment "convenient".
+    //   * Show Quality (btForQuality) only when the FilaSwitch is ready
+    //     (it's an X2D/H2D-class feature about main vs aux extruder).
+    // Note we hide whole rows -- the radio button, label, description,
+    // and detail line together -- so the popup re-flows correctly.
+    const bool fs_ready = wxGetApp().sidebar().is_fila_switch_ready();
+    auto set_row_visible = [&](size_t idx, bool visible) {
+        if (idx >= radio_btns.size()) return;
+        if (radio_btns[idx])      radio_btns[idx]->Show(visible);
+        if (button_labels[idx])   button_labels[idx]->Show(visible);
+        if (button_desps[idx])    button_desps[idx]->Show(visible);
+        if (detail_infos[idx])    detail_infos[idx]->Show(visible);
+    };
+    set_row_visible(ButtonType::btForMatch,   !fs_ready);
+    set_row_visible(ButtonType::btForQuality, fs_ready);
+
+    // If the current mode was just hidden, fall back to Filament-Saving.
+    if (fs_ready && m_mode == fmmAutoForMatch) {
+        SetFilamentMapMode(fmmAutoForFlush);
+        m_mode = fmmAutoForFlush;
+    }
+    if (!fs_ready && m_mode == fmmAutoForQuality) {
+        SetFilamentMapMode(fmmAutoForFlush);
+        m_mode = fmmAutoForFlush;
+    }
+
+    Layout();
+    Fit();
 
     UpdateButtonStatus();
     GUI::wxGetApp().UpdateDarkUIWin(this);
