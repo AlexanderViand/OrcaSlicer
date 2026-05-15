@@ -143,6 +143,23 @@ if (APPLE)
 #    add_definitions(-DBOOST_THREAD_DONT_USE_CHRONO -DBOOST_NO_CXX11_RVALUE_REFERENCES -DBOOST_THREAD_USES_MOVE)
     # -liconv: boost links to libiconv by default
     target_link_libraries(OrcaSlicer "-liconv -framework IOKit" "-framework CoreFoundation" "-framework AVFoundation" "-framework AVKit" "-framework CoreMedia" "-framework VideoToolbox" -lc++)
+
+    # Build and link the BBL signature-bypass shim. The shim is a tiny
+    # interposing dylib that makes Bambu's networking plugin think it's
+    # loaded inside BambuStudio.app at signature-verification time. Linking
+    # it at build time (vs. DYLD_INSERT_LIBRARIES at launch time) means the
+    # interpose is active automatically whenever OrcaSlicer.app launches,
+    # so users don't have to launch from the command line with the env var.
+    add_subdirectory(${CMAKE_SOURCE_DIR}/tools/bbl_bypass ${CMAKE_BINARY_DIR}/tools/bbl_bypass)
+    target_link_libraries(OrcaSlicer bbl_bypass)
+    # The shim's install_name is @executable_path/libbbl_bypass.dylib, so at
+    # runtime dyld looks for it right next to the binary inside
+    # OrcaSlicer.app/Contents/MacOS/. Copy it there after both targets build.
+    add_custom_command(TARGET OrcaSlicer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:bbl_bypass>
+                $<TARGET_FILE_DIR:OrcaSlicer>/$<TARGET_FILE_NAME:bbl_bypass>
+        VERBATIM)
 elseif (MSVC)
     # Manifest is provided through OrcaSlicer.rc, don't generate your own.
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MANIFEST:NO")
@@ -264,6 +281,48 @@ else ()
         COMMAND ln -sfn "${SLIC3R_RESOURCES_DIR}" "${BIN_RESOURCES_DIR}"
         COMMENT "Symlinking the resources directory into the build tree"
         VERBATIM)
+
+    # Dev-build codesigning. Ad-hoc signed binaries change their identity hash
+    # on every rebuild, which invalidates the macOS keychain ACL that protects
+    # the "OrcaSlicer/Auth" item. Result: the keychain prompt re-appears after
+    # every build. Codesigning with a *stable* identity (typically a free
+    # self-signed cert created via Keychain Access -> Certificate Assistant)
+    # makes the ACL stick, so the user gets one "Always Allow" and never sees
+    # the prompt again.
+    #
+    # The user provides the identity name (e.g. "OrcaSlicer Dev Sign") via the
+    # ORCASLICER_CODESIGN_IDENTITY CMake variable. If left unset we try to
+    # auto-detect a cert named "OrcaSlicer Dev Sign" in the keychain, since
+    # that's the recommended default. If no such cert exists we skip
+    # codesigning entirely so unconfigured machines still build cleanly.
+    if(NOT DEFINED ORCASLICER_CODESIGN_IDENTITY)
+        execute_process(
+            COMMAND security find-certificate -c "OrcaSlicer Dev Sign"
+            RESULT_VARIABLE _orcaslicer_default_cert_present
+            OUTPUT_QUIET ERROR_QUIET)
+        if(_orcaslicer_default_cert_present EQUAL 0)
+            set(ORCASLICER_CODESIGN_IDENTITY "OrcaSlicer Dev Sign"
+                CACHE STRING "macOS code-signing identity for dev builds; empty disables codesigning")
+        else()
+            set(ORCASLICER_CODESIGN_IDENTITY ""
+                CACHE STRING "macOS code-signing identity for dev builds; empty disables codesigning")
+        endif()
+    endif()
+
+    if(ORCASLICER_CODESIGN_IDENTITY)
+        message(STATUS "OrcaSlicer: codesigning with identity '${ORCASLICER_CODESIGN_IDENTITY}'")
+        # Sign libbbl_bypass.dylib first, then OrcaSlicer (signatures of
+        # embedded dylibs must be valid when the host is signed).
+        add_custom_command(TARGET OrcaSlicer POST_BUILD
+            COMMAND codesign --force --sign "${ORCASLICER_CODESIGN_IDENTITY}"
+                    "$<TARGET_FILE_DIR:OrcaSlicer>/$<TARGET_FILE_NAME:bbl_bypass>"
+            COMMAND codesign --force --sign "${ORCASLICER_CODESIGN_IDENTITY}"
+                    "$<TARGET_FILE:OrcaSlicer>"
+            COMMENT "Codesigning OrcaSlicer + bbl_bypass with '${ORCASLICER_CODESIGN_IDENTITY}'"
+            VERBATIM)
+    else()
+        message(STATUS "OrcaSlicer: no codesign identity configured (set ORCASLICER_CODESIGN_IDENTITY or create a 'OrcaSlicer Dev Sign' cert in Keychain Access to stabilize the keychain prompt)")
+    endif()
 endif ()
 
 # Slic3r binary install target. Default build type is release in case no CMAKE_BUILD_TYPE is provided.
