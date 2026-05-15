@@ -4444,7 +4444,8 @@ void MachineObject::update_model_task()
             unsigned int http_code = 404;
             std::string  http_error;
             int          res = -1;
-            res = m_agent->get_model_mall_rating_result(curr_instance_id, rating_result, http_code, http_error);
+            res = m_agent->get_model_mall_rating_result(curr_instance_id, rating_result, http_code, http_error,
+                                                        Slic3r::GUI::wxGetApp().get_printer_cloud_provider());
             request_model_result++;
             BOOST_LOG_TRIVIAL(info) << "request times: " << request_model_result << " http code: " << http_code;
             auto rating_info = new DevPrintTaskRatingInfo();
@@ -4557,7 +4558,8 @@ void MachineObject::update_slice_info(std::string project_id, std::string profil
                 std::string subtask_json;
                 unsigned http_code = 0;
                 std::string http_body;
-                if (m_agent->get_subtask_info(subtask_id, &subtask_json, &http_code, &http_body) == 0) {
+                if (m_agent->get_subtask_info(subtask_id, &subtask_json, &http_code, &http_body,
+                                              Slic3r::GUI::wxGetApp().get_printer_cloud_provider()) == 0) {
                     try {
                         if (!subtask_json.empty()) {
 
@@ -4632,7 +4634,8 @@ void MachineObject::get_firmware_info()
             unsigned int http_code;
             std::string  http_body;
             if (!m_agent) return;
-            result = m_agent->get_printer_firmware(get_dev_id(), &http_code, &http_body);
+            result = m_agent->get_printer_firmware(get_dev_id(), &http_code, &http_body,
+                                                   Slic3r::GUI::wxGetApp().get_printer_cloud_provider());
             if (result < 0) {
                 // get upgrade list failed
                 return;
