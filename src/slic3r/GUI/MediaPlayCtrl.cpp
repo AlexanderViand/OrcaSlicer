@@ -182,9 +182,9 @@ void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
             Play();
         else if (m_last_state == MEDIASTATE_LOADING && m_tutk_state == "disable"
                 && m_last_user_play + wxTimeSpan::Seconds(3) < wxDateTime::Now()) {
-            // resend ttcode to printer
+            // resend ttcode to printer (Bambu cloud route, not Orca stub).
             if (auto agent = wxGetApp().getAgent())
-                agent->get_camera_url(machine, [](auto) {});
+                agent->get_camera_url(machine, [](auto) {}, wxGetApp().get_printer_cloud_provider());
             m_last_user_play = wxDateTime::Now();
         }
         return;
@@ -250,9 +250,12 @@ void refresh_agora_url(char const* device, char const* dev_ver, char const* chan
     device2 += dev_ver;
     device2 += "|\"agora\"|";
     device2 += channel;
+    // Route through BBL_CLOUD_PROVIDER explicitly; OrcaCloudServiceAgent's
+    // get_camera_url is a stub returning "" which makes Bambu camera streaming
+    // silently fail with [1:3] otherwise.
     wxGetApp().getAgent()->get_camera_url(device2, [context, callback](std::string url) {
         callback(context, url.c_str());
-    });
+    }, wxGetApp().get_printer_cloud_provider());
 }
 
 void MediaPlayCtrl::Play()
@@ -339,6 +342,8 @@ void MediaPlayCtrl::Play()
 
     if (agent) {
         std::string protocols[] = {"", "\"tutk\"", "\"agora\"", "\"tutk\",\"agora\""};
+        // Bambu cloud route — OrcaCloudServiceAgent's get_camera_url is a stub
+        // that returns "" (causing silent [1:3] failure on Bambu printers).
         agent->get_camera_url(m_machine + "|" + m_dev_ver + "|" + protocols[m_remote_proto],
                 [this, m = m_machine, v = agent_version, dv = m_dev_ver, token = std::weak_ptr(m_token)](std::string url) {
             if (token.expired()) {
@@ -354,7 +359,7 @@ void MediaPlayCtrl::Play()
                 url += "&cli_id=" + wxGetApp().app_config->get("slicer_uuid");
                 url += "&cli_ver=" + std::string(SLIC3R_VERSION);
             }
-            BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl: " << hide_passwd(url, 
+            BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl: " << hide_passwd(url,
                     {"?uid=", "authkey=", "passwd=", "license=", "token="});
             CallAfter([this, m, url] {
                 if (m != m_machine) {
@@ -378,7 +383,7 @@ void MediaPlayCtrl::Play()
                     BOOST_LOG_TRIVIAL(info) << "MediaPlayCtrl drop late ttcode for state: " << m_last_state;
                 }
             });
-        });
+        }, wxGetApp().get_printer_cloud_provider());
     }
 }
 
@@ -580,7 +585,7 @@ void MediaPlayCtrl::ToggleStream()
             file.close();
             m_streaming = true;
         });
-    });
+    }, wxGetApp().get_printer_cloud_provider());
 }
 
 void MediaPlayCtrl::msw_rescale() { 
