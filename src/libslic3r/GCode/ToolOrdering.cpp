@@ -1180,11 +1180,9 @@ std::vector<int> ToolOrdering::get_recommended_filament_maps(const std::vector<s
             context.group_info.mode = fg_mode;
             context.group_info.ignore_ext_filament = ignore_ext_filament;
             // X2D / FS01: forward the print-config flag into the grouping
-            // context. Note OrcaSlicer's FilamentGroup machinery does not yet
-            // consume this flag for the deeper select_best_group_for_ams
-            // reroute logic (that requires the larger FilamentGroup refactor
-            // from bambu/master); for now the flag's effect is the
-            // calc_max_group_size override above and any future consumers.
+            // context. Consumed by select_best_group_for_ams to skip the
+            // per-side color-distance bias when FS01 is present, and by the
+            // calc_max_group_size override above to lift the AMS slot cap.
             context.group_info.has_filament_switcher = print_config.has_filament_switcher.value;
         }
 

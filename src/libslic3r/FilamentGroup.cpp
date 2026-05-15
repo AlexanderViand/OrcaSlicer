@@ -138,9 +138,22 @@ namespace Slic3r
         const std::vector<unsigned int>& used_filaments,
         const std::vector<FilamentInfo>& used_filament_info,
         const std::vector<std::vector<MachineFilamentInfo>>& machine_filament_info_,
+        const bool has_filament_switcher,
         const double color_threshold)
     {
         using namespace FlushPredict;
+
+        // X2D / FS01 fast path: with a filament switcher present, both
+        // physical extruders can pull from any AMS, so the color-distance
+        // cost across "which side has the closest matching AMS material" is
+        // a misleading bias. The caller has already produced a small list of
+        // candidate maps (calc_min_flush_group's flush-optimized output and,
+        // when applicable, optimize_group_for_master_extruder's main-biased
+        // output). Returning the front of that list gives us the smarter
+        // choice without overriding it via AMS-side color matching.
+        if (has_filament_switcher) {
+            return map_lists.empty() ? std::vector<int>() : map_lists.front();
+        }
 
         const int fail_cost = 9999;
 
@@ -578,7 +591,15 @@ namespace Slic3r
     std::vector<int> FilamentGroup::calc_filament_group(int* cost)
     {
         try {
-            if (FGMode::MatchMode == ctx.group_info.mode)
+            // X2D / FS01: MatchMode tries to assign each filament to the
+            // extruder whose AMS has the closest-color material. That's a
+            // useful bias when each AMS only feeds one extruder, but with a
+            // filament switcher every AMS can feed every extruder, so the
+            // bias becomes noise that overrides the flush-optimal grouping.
+            // Skip MatchMode entirely when FS01 is enabled and fall through
+            // to the flush-optimal path (which itself short-circuits its
+            // per-side cost calc via select_best_group_for_ams).
+            if (FGMode::MatchMode == ctx.group_info.mode && !ctx.group_info.has_filament_switcher)
                 return calc_filament_group_for_match(cost);
         }
         catch (const FilamentGroupException& e) {
@@ -769,7 +790,9 @@ namespace Slic3r
             used_filament_info.emplace_back(ctx.model_info.filament_info[f]);
         }
 
-        ret = select_best_group_for_ams(memoryed_maps, used_filaments, used_filament_info, ctx.machine_info.machine_filament_info);
+        ret = select_best_group_for_ams(memoryed_maps, used_filaments, used_filament_info,
+                                        ctx.machine_info.machine_filament_info,
+                                        ctx.group_info.has_filament_switcher);
         return ret;
     }
 

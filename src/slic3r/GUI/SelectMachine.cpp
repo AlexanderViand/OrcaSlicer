@@ -22,6 +22,7 @@
 #include "DeviceCore/DevNozzleSystem.h"
 #include "DeviceCore/DevExtensionTool.h"
 #include "DeviceCore/DevExtruderSystem.h"
+#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevFilaBlackList.h"
 #include "DeviceCore/DevFilaSystem.h"
 #include "DeviceCore/DevManager.h"
@@ -1302,7 +1303,26 @@ bool SelectMachineDialog::build_nozzles_info(std::string& nozzles_info)
 }
 
 bool SelectMachineDialog::can_hybrid_mapping(DevExtderSystem data) {
-    // Mixed mappings are not allowed
+    // X2D / FS01: the filament switcher hardware lets either physical
+    // extruder pull from any AMS, so AMS-to-extruder mapping is effectively
+    // hybrid (no fixed side). Bambu/master gates this on
+    // FilaSwitch::IsInstalled(); we mirror that. Falls back to the
+    // previously-disabled flow-type-mismatch logic below for non-FS01
+    // multi-extruder cases (which OrcaSlicer left commented out
+    // historically -- "Mixed mappings are not allowed" -- so we preserve
+    // that behaviour and only opt in via FilaSwitch).
+    if (auto* dev = wxGetApp().getDeviceManager()) {
+        if (auto* obj = dev->get_selected_machine()) {
+            if (auto* fs = obj->GetFilaSwitch()) {
+                if (fs->IsInstalled())
+                    return true;
+            }
+        }
+    }
+
+    // Non-FS01: keep the legacy "mixed mappings are not allowed" behaviour
+    // by returning false for now. The flow-type-mismatch logic below stays
+    // disabled until someone audits it for the current dual-extruder UX.
     return false;
 
     if (data.GetTotalExtderCount() <= 1 || !wxGetApp().preset_bundle)
@@ -3940,7 +3960,10 @@ void SelectMachineDialog::reset_and_sync_ams_list()
             {
                 if (obj_ && can_hybrid_mapping(*obj_->GetExtderSystem()))
                 {
-                    m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);
+                    // X2D / FS01: switcher routes any AMS to any extruder,
+                    // so show all AMSes in a single unified panel rather
+                    // than splitting them by physical side.
+                    m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT_DYNAMIC);
                 }
                 else if (m_filaments_map[extruder] == 1)
                 {
@@ -4452,7 +4475,8 @@ void SelectMachineDialog::set_default_from_sdcard()
 
                 if (diameters_count > 1) {
                     if (obj_ && can_hybrid_mapping(*obj_->GetExtderSystem())) {
-                        m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);
+                        // X2D / FS01: see SelectMachine line ~3943 comment.
+                        m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT_DYNAMIC);
                     } else if (m_filaments_map[m_current_filament_id] == 1) {
                         m_mapping_popup.set_show_type(ShowType::LEFT);
                     } else if (m_filaments_map[m_current_filament_id] == 2) {

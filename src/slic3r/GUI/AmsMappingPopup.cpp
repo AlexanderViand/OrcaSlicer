@@ -861,9 +861,13 @@ void AmsMapingPopup::on_left_down(wxMouseEvent &evt)
             }
 
             if (item->m_tray_data.type == TrayType::EMPTY) return;
+            // X2D / FS01: LEFT_AND_RIGHT_DYNAMIC routes every AMS to the
+            // right panel, so accept item clicks from the "right" panel in
+            // that mode just like in LEFT_AND_RIGHT.
             if ((m_show_type == ShowType::LEFT && item->GetParent()->GetName() == "left") ||
                 (m_show_type == ShowType::RIGHT && item->GetParent()->GetName() == "right") ||
-                m_show_type == ShowType::LEFT_AND_RIGHT) {
+                m_show_type == ShowType::LEFT_AND_RIGHT ||
+                m_show_type == ShowType::LEFT_AND_RIGHT_DYNAMIC) {
                 item->send_event(m_current_filament_id);
                 Dismiss();
                 break;
@@ -1119,6 +1123,21 @@ void AmsMapingPopup::update(MachineObject* obj, const std::vector<FilamentInfo>&
             }
             m_right_extra_slot->Show();
         }
+        else if (m_show_type == ShowType::LEFT_AND_RIGHT_DYNAMIC)
+        {
+            // X2D / FS01: all AMSes were routed to the right panel in
+            // update_mapping_items, so make the right panel visible and
+            // re-title it as "AMS" (not "Right AMS") because in dynamic-
+            // switch mode the side is irrelevant -- the filament switcher
+            // can feed either extruder from any AMS.
+            m_right_marea_panel->Show();
+            set_sizer_title(m_right_split_ams_sizer, _L("AMS"));
+            m_right_extra_slot->Show();
+            if (m_use_in_sync_dialog) {
+                m_left_tips->SetLabel(m_single_tip_text);
+                m_right_tips->SetLabel("");
+            }
+        }
     }
 
     for (int i = 0; i < obj->vt_slot.size(); i++) {
@@ -1175,11 +1194,21 @@ void AmsMapingPopup::update(MachineObject* obj, const std::vector<FilamentInfo>&
             int ams_indx  = atoi(ams_iter->first.c_str());
             int nozzle_id = ams_iter->second->GetExtruderId();
 
+            // X2D / FS01: in dynamic-switch mode every AMS is reachable by
+            // both extruders, so the per-side filter by GetExtruderId() would
+            // hide half of them. Bambu/master collapses them into a single
+            // panel (the right one) for this case; we mirror that behaviour.
+            wxPanel* target_panel = nullptr;
+            if (m_show_type == ShowType::LEFT_AND_RIGHT_DYNAMIC) {
+                target_panel = m_right_marea_panel;
+            } else {
+                target_panel = (nozzle_id == 0) ? m_right_marea_panel : m_left_marea_panel;
+            }
 
             auto sizer_mapping_list         = new wxBoxSizer(wxHORIZONTAL);
-            auto ams_mapping_item_container = new MappingContainer(nozzle_id == 0 ? m_right_marea_panel : m_left_marea_panel, ams_iter->second->GetDisplayName(),
+            auto ams_mapping_item_container = new MappingContainer(target_panel, ams_iter->second->GetDisplayName(),
                                                                    ams_iter->second->GetSlotCount());
-            ams_mapping_item_container->SetName(nozzle_id == 0 ? m_right_marea_panel->GetName() : m_left_marea_panel->GetName());
+            ams_mapping_item_container->SetName(target_panel->GetName());
             ams_mapping_item_container->SetSizer(sizer_mapping_list);
             ams_mapping_item_container->Layout();
 
@@ -1227,7 +1256,13 @@ void AmsMapingPopup::update(MachineObject* obj, const std::vector<FilamentInfo>&
             m_amsmapping_container_sizer_list.push_back(sizer_mapping_list);
             m_amsmapping_container_list.push_back(ams_mapping_item_container);
 
-            if (nozzle_id == 0) {
+            // X2D / FS01: in dynamic-switch mode all AMSes were routed to the
+            // right panel above, so group them all into the right containers
+            // regardless of GetExtruderId(). Otherwise fall back to the
+            // legacy per-side classification.
+            const bool route_to_right =
+                (m_show_type == ShowType::LEFT_AND_RIGHT_DYNAMIC) || (nozzle_id == 0);
+            if (route_to_right) {
                 has_right_ams = true;
                 if (ams_mapping_item_container->get_slots_num() == 1) {
                     right_one_slot_containers.push_back(ams_mapping_item_container);

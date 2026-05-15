@@ -57,7 +57,12 @@ enum TrayType {
 enum ShowType {
     LEFT,   //  only show left ams and left ext
     RIGHT,  //only show right ams and right ext
-    LEFT_AND_RIGHT  //show left and right ams at the same time
+    LEFT_AND_RIGHT,  //show left and right ams at the same time
+    // X2D / FS01: show ALL AMSes from both physical sides under a single
+    // panel because the filament switcher routes any AMS to any extruder.
+    // Per-side filtering by GetExtruderId() is wrong here. Ported from
+    // bambu/master where it's named the same.
+    LEFT_AND_RIGHT_DYNAMIC
 };
 
 struct TrayData

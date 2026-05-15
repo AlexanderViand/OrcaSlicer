@@ -25,6 +25,7 @@
 #include "DeviceCore/DevConfig.h"
 #include "DeviceCore/DevConfigUtil.h"
 #include "DeviceCore/DevFilaSystem.h"
+#include "DeviceCore/DevFilaSwitch.h"
 #include "DeviceCore/DevManager.h"
 #include "DeviceCore/DevMapping.h"
 #include "DeviceCore/DevStorage.h"
@@ -2740,7 +2741,15 @@ void SyncAmsInfoDialog::reset_and_sync_ams_list()
             if (!dev_manager) return;
             MachineObject *obj_        = dev_manager->get_selected_machine();
             if (get_is_double_extruder()) {
-                m_mapping_popup.set_show_type(ShowType::LEFT_AND_RIGHT);//special
+                // X2D / FS01: when the printer has a filament switcher, the
+                // mapping is hybrid — any AMS feeds any extruder — so show
+                // all AMSes in a single unified panel. Mirrors
+                // bambu/master SyncAmsInfoDialog.cpp's LEFT_AND_RIGHT_DYNAMIC
+                // branch. Falls back to legacy LEFT_AND_RIGHT for plain
+                // dual-extruder printers without FS01.
+                bool fs_installed = obj_ && obj_->GetFilaSwitch() && obj_->GetFilaSwitch()->IsInstalled();
+                m_mapping_popup.set_show_type(fs_installed ? ShowType::LEFT_AND_RIGHT_DYNAMIC
+                                                           : ShowType::LEFT_AND_RIGHT);//special
             }
             // m_mapping_popup.set_show_type(ShowType::RIGHT);
             if (obj_) {

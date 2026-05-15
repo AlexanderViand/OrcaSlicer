@@ -101,6 +101,13 @@ namespace Slic3r
         const std::vector<unsigned int>& used_filaments,
         const std::vector<FilamentGroupUtils::FilamentInfo>& used_filament_info,
         const std::vector<std::vector<FilamentGroupUtils::MachineFilamentInfo>>& machine_filament_info,
+        // X2D / FS01: when true, skip the per-side color-distance cost
+        // calculation. With a filament switcher every AMS feeds every
+        // extruder, so picking the extruder based on which side has the
+        // closest-color AMS material doesn't reflect physical reality and
+        // routinely overrides calc_min_flush_group's smarter "both filaments
+        // on the same extruder" choice.
+        const bool has_filament_switcher = false,
         const double color_delta_threshold = 20);
 
     std::vector<int> optimize_group_for_master_extruder(const std::vector<unsigned int>& used_filaments, const FilamentGroupContext& ctx, const std::vector<int>& filament_map);
