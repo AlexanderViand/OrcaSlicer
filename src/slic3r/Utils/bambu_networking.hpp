@@ -313,7 +313,12 @@ struct NetworkLibraryVersion {
 };
 
 static const NetworkLibraryVersion AVAILABLE_NETWORK_VERSIONS[] = {
-    {"02.03.00.62", "02.03.00.62", nullptr, true, nullptr},
+    // 02.06.00.50 adds bambu_network_get_camera_url_for_golive and
+    // bambu_network_get_hms_snapshot, which newer Bambu printers (X2D, H2D)
+    // require for cloud camera streaming. Older 02.03.x and earlier hit
+    // HTTP 403 on get_camera_url for these devices.
+    {"02.06.00.50", "02.06.00.50", nullptr, true, nullptr},
+    {"02.03.00.62", "02.03.00.62", nullptr, false, nullptr},
     {"02.01.01.52", "02.01.01.52", nullptr, false, nullptr},
     {"02.00.02.50", "02.00.02.50", nullptr, false, "This version may crash on startup due to Bambu Lab's signature verification."},
     {BAMBU_NETWORK_AGENT_VERSION_LEGACY, BAMBU_NETWORK_AGENT_VERSION_LEGACY " (legacy)", nullptr, false, nullptr},

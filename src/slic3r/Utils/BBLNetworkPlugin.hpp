@@ -98,6 +98,12 @@ typedef int (*func_get_slice_info)(void *agent, std::string project_id, std::str
 typedef int (*func_query_bind_status)(void *agent, std::vector<std::string> query_list, unsigned int* http_code, std::string* http_body);
 typedef int (*func_modify_printer_name)(void *agent, std::string dev_id, std::string dev_name);
 typedef int (*func_get_camera_url)(void *agent, std::string dev_id, std::function<void(std::string)> callback);
+// Newer plugin (02.06+) export. Bambu Cloud's "go live" endpoint, required by
+// newer printers (X2D, H2D); the legacy get_camera_url returns HTTP 403 for
+// those. Signature taken from bambu/master src/slic3r/Utils/NetworkAgent.hpp:
+// the 3rd arg "sdev_id" is the host's slicer_uuid plus a "-golive" suffix
+// identifying this streaming session to Bambu Cloud.
+typedef int (*func_get_camera_url_for_golive)(void *agent, std::string dev_id, std::string sdev_id, std::function<void(std::string)> callback);
 typedef int (*func_get_design_staffpick)(void *agent, int offset, int limit, std::function<void(std::string)> callback);
 typedef int (*func_start_pubilsh)(void *agent, PublishParams params, OnUpdateStatusFn update_fn, WasCancelledFn cancel_fn, std::string* out);
 typedef int (*func_get_model_publish_url)(void *agent, std::string* url);
@@ -351,6 +357,9 @@ public:
     func_query_bind_status get_query_bind_status() const { return m_query_bind_status; }
     func_modify_printer_name get_modify_printer_name() const { return m_modify_printer_name; }
     func_get_camera_url get_get_camera_url() const { return m_get_camera_url; }
+    // May be nullptr on older plugin versions (02.03.x and earlier). Callers
+    // should fall back to get_get_camera_url() when this is null.
+    func_get_camera_url_for_golive get_get_camera_url_for_golive() const { return m_get_camera_url_for_golive; }
     func_get_design_staffpick get_get_design_staffpick() const { return m_get_design_staffpick; }
     func_start_pubilsh get_start_publish() const { return m_start_publish; }
     func_get_model_publish_url get_get_model_publish_url() const { return m_get_model_publish_url; }
@@ -484,6 +493,7 @@ private:
     func_get_slice_info m_get_slice_info{nullptr};
     func_query_bind_status m_query_bind_status{nullptr};
     func_modify_printer_name m_modify_printer_name{nullptr};
+    func_get_camera_url_for_golive m_get_camera_url_for_golive{nullptr};
     func_get_camera_url m_get_camera_url{nullptr};
     func_get_design_staffpick m_get_design_staffpick{nullptr};
     func_start_pubilsh m_start_publish{nullptr};

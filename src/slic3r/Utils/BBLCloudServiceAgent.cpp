@@ -50,8 +50,14 @@ std::map<std::string, std::string> BBLCloudServiceAgent::get_extra_header()
 {
     std::map<std::string, std::string> extra_headers;
     extra_headers.emplace("X-BBL-Client-Type", "slicer");
-    extra_headers.emplace("X-BBL-Client-Name", SLIC3R_APP_NAME);
-    extra_headers.emplace("X-BBL-Client-Version", GUI::wxGetApp().get_bbl_client_version());
+    // X2D / golive: Bambu Cloud's newer endpoints (notably the golive camera
+    // URL) return HTTP 403 to clients that don't identify as "BambuStudio".
+    // The dyld shim already makes the plugin think it's BambuStudio at code-
+    // signing load time; we extend that consistent identity to the HTTP traffic
+    // it generates so the cloud doesn't reject our requests. The plugin
+    // version (02.06.00.50) is what BambuStudio's current build advertises.
+    extra_headers.emplace("X-BBL-Client-Name", "BambuStudio");
+    extra_headers.emplace("X-BBL-Client-Version", "02.06.00.50");
 #if defined(__WINDOWS__)
 #ifdef _M_X64
     extra_headers.emplace("X-BBL-OS-Type", "windows");
@@ -607,8 +613,27 @@ int BBLCloudServiceAgent::get_camera_url(std::string dev_id, std::function<void(
 {
     auto& plugin = BBLNetworkPlugin::instance();
     auto agent = plugin.get_agent();
-    auto func = plugin.get_get_camera_url();
-    if (func && agent) {
+    if (!agent) return -1;
+
+    // Prefer the newer "_for_golive" endpoint when the loaded plugin exports
+    // it (02.06+). The legacy bambu_network_get_camera_url endpoint returns
+    // HTTP 403 from Bambu Cloud for newer printers (X2D, H2D) and is being
+    // phased out. Older plugins (02.03.x and earlier) only expose the legacy
+    // function so we fall back to that.
+    //
+    // The golive function takes a 3rd std::string arg "sdev_id" between
+    // dev_id and the callback. Per bambu/master's MediaPlayCtrl.cpp this is
+    // the slicer_uuid from app_config plus a "-golive" suffix, identifying
+    // the streaming session to Bambu Cloud.
+    if (auto golive = plugin.get_get_camera_url_for_golive()) {
+        std::string sdev_id;
+        if (auto* cfg = GUI::wxGetApp().app_config) {
+            sdev_id = cfg->get("slicer_uuid") + "-golive";
+        }
+        BOOST_LOG_TRIVIAL(info) << "BBLCloudServiceAgent::get_camera_url: routing through get_camera_url_for_golive, sdev_id=" << sdev_id;
+        return golive(agent, dev_id, sdev_id, callback);
+    }
+    if (auto func = plugin.get_get_camera_url()) {
         return func(agent, dev_id, callback);
     }
     return -1;

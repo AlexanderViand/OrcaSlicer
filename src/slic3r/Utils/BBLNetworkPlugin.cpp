@@ -614,6 +614,8 @@ void BBLNetworkPlugin::load_all_function_pointers()
     m_query_bind_status = reinterpret_cast<func_query_bind_status>(get_function("bambu_network_query_bind_status"));
     m_modify_printer_name = reinterpret_cast<func_modify_printer_name>(get_function("bambu_network_modify_printer_name"));
     m_get_camera_url = reinterpret_cast<func_get_camera_url>(get_function("bambu_network_get_camera_url"));
+    // Newer plugin (02.06+) export; nullptr on older plugins.
+    m_get_camera_url_for_golive = reinterpret_cast<func_get_camera_url_for_golive>(get_function("bambu_network_get_camera_url_for_golive"));
     m_get_design_staffpick = reinterpret_cast<func_get_design_staffpick>(get_function("bambu_network_get_design_staffpick"));
     m_start_publish = reinterpret_cast<func_start_pubilsh>(get_function("bambu_network_start_publish"));
     m_get_model_publish_url = reinterpret_cast<func_get_model_publish_url>(get_function("bambu_network_get_model_publish_url"));
@@ -716,6 +718,7 @@ void BBLNetworkPlugin::clear_all_function_pointers()
     m_query_bind_status = nullptr;
     m_modify_printer_name = nullptr;
     m_get_camera_url = nullptr;
+    m_get_camera_url_for_golive = nullptr;
     m_get_design_staffpick = nullptr;
     m_start_publish = nullptr;
     m_get_model_publish_url = nullptr;
