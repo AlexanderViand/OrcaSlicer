@@ -5819,6 +5819,99 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    // X2D / FS01 wipe-tower port -------------------------------------------
+    // Definitions imported from bambu/master so the bigger WipeTower.cpp
+    // port can call config.<name> directly. Defaults match bambu/master
+    // where they exist; otherwise sensible conservative values. Many of
+    // these are comDevelop-only because they're internal scheduling knobs
+    // not surfaced in OrcaSlicer's UI today.
+
+    def = this->add("enable_pre_heating", coBool);
+    def->mode = comDevelop;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("extruder_max_nozzle_count", coInts);
+    def->mode = comDevelop;
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionIntsNullable{ 1 });
+
+    def = this->add("filament_change_length_nc", coFloats);
+    def->label = L("Hotend change length");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ 10 });
+
+    def = this->add("filament_pre_cooling_temperature", coInts);
+    def->label = L("Pre-cooling temperature");
+    def->mode = comAdvanced;
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionIntsNullable{ 0 });
+
+    def = this->add("filament_pre_cooling_temperature_nc", coInts);
+    def->label = L("Pre-cooling temperature (hotend change)");
+    def->mode = comAdvanced;
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionIntsNullable{ 0 });
+
+    def = this->add("filament_ramming_travel_time", coFloats);
+    def->label = L("Ramming travel time");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ 0 });
+
+    def = this->add("filament_ramming_travel_time_nc", coFloats);
+    def->label = L("Ramming travel time (hotend change)");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ 0 });
+
+    def = this->add("filament_ramming_volumetric_speed", coFloats);
+    def->label = L("Ramming volumetric speed");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ -1 });
+
+    def = this->add("filament_ramming_volumetric_speed_nc", coFloats);
+    def->label = L("Ramming volumetric speed (hotend change)");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloats{ -1 });
+
+    def = this->add("hotend_cooling_rate", coFloats);
+    def->label = L("Hotend cooling rate");
+    def->sidetext = "°C/s";
+    def->mode = comDevelop;
+    def->set_default_value(new ConfigOptionFloats{ 2 });
+
+    def = this->add("hotend_heating_rate", coFloats);
+    def->label = L("Hotend heating rate");
+    def->sidetext = "°C/s";
+    def->mode = comDevelop;
+    def->set_default_value(new ConfigOptionFloats{ 2 });
+
+    def = this->add("prime_tower_extra_rib_length", coFloat);
+    def->label = L("Prime tower extra rib length");
+    def->sidetext = "mm";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("prime_tower_fillet_wall", coBool);
+    def->label = L("Prime tower fillet wall");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("prime_tower_max_speed", coFloat);
+    def->label = L("Prime tower max speed");
+    def->sidetext = "mm/s";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(90));
+
+    def = this->add("prime_tower_rib_wall", coBool);
+    def->label = L("Prime tower rib wall");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("prime_tower_rib_width", coFloat);
+    def->label = L("Prime tower rib width");
+    def->sidetext = "mm";
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(8));
+
     def = this->add("single_extruder_multi_material_priming", coBool);
     def->label = L("Prime all printing extruders");
     def->tooltip = L("If enabled, all printing extruders will be primed at the front edge of the print bed at the start of the print.");
